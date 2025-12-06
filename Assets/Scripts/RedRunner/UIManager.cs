@@ -37,6 +37,8 @@ namespace RedRunner
 		[SerializeField]
 		private Texture2D m_CursorClickTexture;
 
+        [SerializeField] private float m_CursorHideDelay = 3f;
+
         // The cursor timer, which will keep track of how long the cursor has been inactive
         private float cursorTimer;
         // The cursor position, we will use this to compare the cursor position to check if it has moved.
