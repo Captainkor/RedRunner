@@ -20,6 +20,15 @@ namespace RedRunner.Collectables
 		[SerializeField]
 		protected bool m_UseOnTriggerEnter2D = true;
 
+		[Header("Destructable")]
+		[SerializeField]
+		protected float m_destructTime = 0.0f;
+
+		[SerializeField]
+		protected PoolTag m_destructTag;
+		[SerializeField]
+		protected ObjectPool m_objectPool = null;
+
 		public override SpriteRenderer SpriteRenderer {
 			get {
 				return m_SpriteRenderer;
@@ -70,8 +79,14 @@ namespace RedRunner.Collectables
 			m_ParticleSystem.Play ();
 			m_SpriteRenderer.enabled = false;
 			m_Collider2D.enabled = false;
-			Destroy (gameObject, m_ParticleSystem.main.duration);
+			//Destroy (gameObject, m_ParticleSystem.main.duration);
+			ReturnToPool();
 			AudioManager.Singleton.PlayCoinSound (transform.position);
+		}
+
+		public override void ReturnToPool()
+		{
+			m_objectPool.ReturnToPool(m_destructTag, this, m_destructTime);
 		}
 	}
 }
