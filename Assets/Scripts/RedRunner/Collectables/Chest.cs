@@ -180,6 +180,8 @@ namespace RedRunner.Collectables
 			yield return new WaitForSeconds (0.3f);
 			Physics2D.IgnoreCollision (collider2D1, collider2D2, false);
 		}
+
+		public override void ReturnToPool(){}
 	
 	}
 

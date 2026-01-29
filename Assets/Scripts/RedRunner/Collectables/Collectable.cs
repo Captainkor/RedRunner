@@ -8,7 +8,7 @@ namespace RedRunner.Collectables
 	[RequireComponent (typeof(SpriteRenderer))]
 	[RequireComponent (typeof(Collider2D))]
 	[RequireComponent (typeof(Animator))]
-	public abstract class Collectable : MonoBehaviour
+	public abstract class Collectable : MonoBehaviour, IDestruct
 	{
 
 		public const string COLLECT_TRIGGER = "Collect";
@@ -26,6 +26,8 @@ namespace RedRunner.Collectables
 		public abstract void OnCollisionEnter2D (Collision2D collision2D);
 
 		public abstract void Collect ();
+
+		public abstract void ReturnToPool();
 
 	}
 
