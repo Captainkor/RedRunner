@@ -34,7 +34,6 @@ public class ObjectPool : MonoBehaviour
 
             m_poolDictionary.Add(pool.m_tag, objectPool);
 
-            // populate prefab dictionary for fast lookup
             if (!m_poolPrefabDictionary.ContainsKey(pool.m_tag))
             {
                 m_poolPrefabDictionary.Add(pool.m_tag, pool);
@@ -63,7 +62,6 @@ public class ObjectPool : MonoBehaviour
         }
         else
         {
-            // O(1) lookup instead of Find
             if (m_poolPrefabDictionary.TryGetValue(tag, out Pool pool))
             {
                 objectToSpawn = Instantiate(pool.m_prefab);
