@@ -7,6 +7,7 @@ public class ObjectPool : MonoBehaviour
 {
     [SerializeField] List<Pool> m_pools;
     private Dictionary<PoolTag, Queue<Collectable>> m_poolDictionary;
+    private Dictionary<PoolTag, Pool> m_poolPrefabDictionary;
 
     void Start()
     {
@@ -16,8 +17,8 @@ public class ObjectPool : MonoBehaviour
     public void Initialize()
     {
         m_poolDictionary = new Dictionary<PoolTag, Queue<Collectable>>();
+        m_poolPrefabDictionary = new Dictionary<PoolTag, Pool>();
 
-        // Initialize pools using indexed for loops
         for (int poolIndex = 0; poolIndex < m_pools.Count; poolIndex++)
         {
             Pool pool = m_pools[poolIndex];
@@ -25,18 +26,27 @@ public class ObjectPool : MonoBehaviour
 
             for (int i = 0; i < pool.m_size; i++)
             {
-                Collectable obj = Instantiate(pool.m_prefab).GetComponent<Collectable>();
+                Collectable obj = Instantiate(pool.m_prefab);
                 obj.gameObject.SetActive(false);
                 objectPool.Enqueue(obj);
-
                 obj.transform.SetParent(transform);
             }
 
             m_poolDictionary.Add(pool.m_tag, objectPool);
+
+            // populate prefab dictionary for fast lookup
+            if (!m_poolPrefabDictionary.ContainsKey(pool.m_tag))
+            {
+                m_poolPrefabDictionary.Add(pool.m_tag, pool);
+            }
+            else
+            {
+                Debug.LogWarning($"Duplicate pool tag {pool.m_tag} detected in pool prefabs.");
+            }
         }
     }
 
-   public Collectable SpawnFromPool(PoolTag tag, Vector3 position, Quaternion rotation)
+    public Collectable SpawnFromPool(PoolTag tag, Vector3 position, Quaternion rotation)
     {
         if (!m_poolDictionary.ContainsKey(tag))
         {
@@ -47,20 +57,21 @@ public class ObjectPool : MonoBehaviour
         Queue<Collectable> objectPool = m_poolDictionary[tag];
         Collectable objectToSpawn = null;
 
-        // Check if there are inactive objects available
         if (objectPool.Count > 0)
         {
-            // Dequeue the object and reuse it
             objectToSpawn = objectPool.Dequeue();
         }
         else
         {
-            // If no inactive objects are available, instantiate a new one
-            Pool pool = m_pools.Find(p => p.m_tag == tag);
-            if (pool != null)
+            // O(1) lookup instead of Find
+            if (m_poolPrefabDictionary.TryGetValue(tag, out Pool pool))
             {
                 objectToSpawn = Instantiate(pool.m_prefab);
-                objectToSpawn.transform.SetParent(transform); // Set parent to this ObjectPool
+                objectToSpawn.transform.SetParent(transform);
+            }
+            else
+            {
+                Debug.LogWarning($"Pool prefab for tag {tag} not found.");
             }
         }
 

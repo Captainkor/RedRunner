@@ -8,7 +8,7 @@ namespace RedRunner.Collectables
 	[RequireComponent (typeof(SpriteRenderer))]
 	[RequireComponent (typeof(Collider2D))]
 	[RequireComponent (typeof(Animator))]
-	public abstract class Collectable : MonoBehaviour, IDestruct
+	public abstract class Collectable : MonoBehaviour, IPoolable
 	{
 
 		public const string COLLECT_TRIGGER = "Collect";
