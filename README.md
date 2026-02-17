@@ -78,6 +78,49 @@ Also you can the build version of the Red Runner using the following ways:
 - [GameDev Resources](https://github.com/Kavex/GameDev-Resources) - 🎮 🎲 A wonderful list of Game Development resources.
 - [UnityLibrary](https://github.com/UnityCommunity/UnityLibrary) - 📚 Library of all kind of scripts, snippets & shaders for Unity.
 
+## DDA (Dynamic Difficulty Adjustment) System
+
+This fork includes **LLM-based Dynamic Difficulty Adjustment** using the MAPE-K loop architecture from the DDA-MAPEKit paper (SBGames 2024).
+
+### Features
+
+- **LLM-Powered Adjustments**: Uses Gemini (free) or Claude (paid) to intelligently adjust game difficulty
+- **Interactive Configuration**: Custom wizards to configure variables, metrics, prompts, and mappings
+- **Multi-Provider Support**: Compare Gemini vs Claude performance side-by-side
+- **MAPE-K Architecture**: Monitor → Analyze → Plan → Execute with Knowledge base
+- **SPAR Prompting**: Structured prompts following best practices from the paper
+- **Offline Testing**: Simulate player profiles without running the game
+- **Evaluation Tools**: Compare LLM-based vs rule-based approaches
+
+### Quick Start with DDA
+
+1. **Scaffold components**: `/dda-scaffold configure` (interactive) or `/dda-scaffold all` (defaults)
+2. **Configure metrics**: `/dda-metrics add custom` to track player behavior
+3. **Generate prompt**: `/dda-prompt generate custom` to customize LLM reasoning
+4. **Wire systems**: `/dda-integrate configure-mapping <variable>` for each difficulty variable
+5. **Test offline**: `/dda-test simulate custom` with synthetic player profiles
+6. **Evaluate**: `/dda-evaluate compare` to compare LLM vs rule-based
+
+See `CLAUDE.md` for detailed documentation on all DDA skills and workflows.
+
+### DDA Skills
+
+| Skill | Purpose |
+|-------|---------|
+| `dda-scaffold` | Generate MAPE-K components with optional configuration wizard |
+| `dda-metrics` | Instrument player behavior metrics with custom collection methods |
+| `dda-prompt` | Create and optimize SPAR-format prompts for LLM policy engine |
+| `dda-integrate` | Wire difficulty variables to game systems with flexible mappings |
+| `dda-test` | Simulate player profiles and test adjustments offline |
+| `dda-evaluate` | Compare LLM vs rule-based approaches with detailed reports |
+
+### Configuration
+
+All DDA settings are stored in `Assets/Scripts/RedRunner/DDA/dda_config.json`, allowing you to:
+- Version control your DDA strategy
+- Share configurations with teammates
+- Switch between different setups easily
+
 ## Resources
 
 [:rocket: Patreon](https://www.patreon.com/BayatGames)

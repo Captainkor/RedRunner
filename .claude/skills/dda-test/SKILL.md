@@ -12,8 +12,11 @@ You help students test their LLM DDA integration by simulating player scenarios 
 ## Arguments
 
 - `simulate` — Run a single simulation with a specified player profile and symptom
+- `simulate custom` — Create and test a custom player profile interactively
 - `batch` — Run all 5+ standard test scenarios from the paper's methodology
+- `batch custom` — Run batch tests with user-defined scenarios
 - `validate` — Check a set of LLM outputs against thresholds and reasonableness
+- `compare-providers` — Run same scenarios on both Gemini and Claude and compare results
 - If no argument, default to `simulate`
 
 ## Standard Test Scenarios
@@ -151,7 +154,10 @@ Following the paper's Table 1 approach, create test cases covering different pro
 3. Ask the student which simulation ID to run (1-5) or accept custom input
 4. Construct the full prompt by combining: System prompt + Examples + Request JSON
 5. Print the complete prompt that WOULD be sent to the API
-6. If the student has an API key configured, offer to make the actual call via a Python script using the Anthropic SDK or curl
+6. If the student has an API key configured, offer to make the actual API call. Determine the provider from `LLMPolicyEngine.cs` (`m_Provider` field):
+   - **Gemini** (default, free): `curl -X POST "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=API_KEY" -H "Content-Type: application/json" -d '{"contents":[{"parts":[{"text":"FULL_PROMPT"}]}],"generationConfig":{"maxOutputTokens":1024,"temperature":0.2}}'`
+   - **Claude** (paid): `curl -X POST "https://api.anthropic.com/v1/messages" -H "x-api-key: API_KEY" -H "anthropic-version: 2023-06-01" -H "content-type: application/json" -d '{"model":"claude-sonnet-4-5-20250929","max_tokens":1024,"system":"SYSTEM_PROMPT","messages":[{"role":"user","content":"REQUEST_JSON"}]}'`
+   - Note: Gemini responses may include markdown code fences around JSON — strip ` ```json ``` ` before parsing
 7. Display the result and validate it
 
 ### For `batch`
@@ -179,6 +185,46 @@ Check LLM output against these rules:
 6. **No hallucinations**: No extra fields or unexpected data types
 
 Print a validation report with pass/fail per check.
+
+## Custom Simulation Wizard
+
+When `simulate custom` is invoked:
+
+1. **Player profile type**
+   - Choose from: "Expert", "Good", "Average", "Struggling", "Beginner", "Custom"
+   - For custom, ask for metrics values
+
+2. **Symptom classification**
+   - Manual: Choose from 7 symptom levels
+   - Auto: Calculate symptom from metrics using DDAAnalyzer thresholds
+
+3. **Starting difficulty values**
+   - Use current profile from scene
+   - Use balanced defaults (0.5, midpoint values)
+   - Custom values
+
+4. **Output preference**
+   - Console only
+   - Save to file (JSON)
+   - Both
+
+When `batch custom` is invoked:
+- Ask how many scenarios (1-10 recommended)
+- For each scenario, run the custom wizard or load from file
+- Save batch definition to `TestResults/custom_batch.json` for reuse
+
+When `compare-providers` is invoked:
+- Check if both Gemini and Claude API keys are configured
+- Run the same scenarios on both
+- Display side-by-side comparison table:
+```
+| Scenario | Variable    | Gemini Output | Claude Output | Difference |
+|----------|-------------|---------------|---------------|------------|
+| 1        | enemyDensity| 0.55          | 0.52          | -0.03      |
+...
+```
+- Flag significant disagreements (>0.1 difference)
+- Suggest which provider is more appropriate for this use case
 
 ## Output Format
 

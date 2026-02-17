@@ -94,19 +94,33 @@ Uses Unity's `CrossPlatformInput` (Standard Assets) for Horizontal, Jump, Guard,
 
 This project includes Claude Code skills for implementing LLM-based Dynamic Difficulty Adjustment following the MAPE-K loop architecture from the DDA-MAPEKit paper (SBGames 2024).
 
+### LLM Provider Setup
+
+The `LLMPolicyEngine` supports multiple LLM providers via the `LLMProvider` enum. **Gemini Flash is the default** (free tier, ideal for classroom demos).
+
+| Provider | Default Model | Cost | API Key |
+|----------|--------------|------|---------|
+| **Gemini** (default) | `gemini-2.0-flash` | Free (10 RPM, ~1000 req/day) | [Get key at Google AI Studio](https://aistudio.google.com/apikey) |
+| Claude | `claude-sonnet-4-5-20250929` | $3/$15 per 1M tokens | [Get key at Anthropic Console](https://console.anthropic.com/) |
+
+**For classroom use**: Select **Gemini** in the Inspector dropdown and paste your free API key. No billing account required.
+
 ### Available Skills
+
+All skills now support **interactive configuration** for customizing your DDA setup.
 
 | Skill | Command | Purpose |
 |-------|---------|---------|
-| **dda-scaffold** | `/dda-scaffold [component\|all]` | Scaffold MAPE-K components (DifficultyProfile, PlayerMetricsCollector, DDAAnalyzer, LLMPolicyEngine, DifficultyEffector, DDAManager) |
-| **dda-prompt** | `/dda-prompt [generate\|improve\|test\|show]` | Generate and iterate on SPAR-format prompts for the LLM Policy Engine |
-| **dda-metrics** | `/dda-metrics [add\|list\|debug\|export]` | Instrument player behavior metrics (Monitor phase) |
-| **dda-test** | `/dda-test [simulate\|batch\|validate]` | Simulate player profiles and test LLM adjustments offline |
-| **dda-evaluate** | `/dda-evaluate [compare\|report\|analyze-logs]` | Compare rule-based vs LLM-based results, generate evaluation reports |
-| **dda-integrate** | `/dda-integrate [wire\|verify\|debug]` | Wire LLM output to game systems (Effector phase) |
+| **dda-scaffold** | `/dda-scaffold [component\|all\|configure]` | Scaffold MAPE-K components. Use `configure` for interactive wizard to choose variables, metrics, LLM provider, and wiring preferences |
+| **dda-prompt** | `/dda-prompt [generate\|improve\|test\|show\|compare-providers]` | Generate and iterate on SPAR-format prompts. Use `generate custom` for wizard or `compare-providers` for Gemini/Claude optimization |
+| **dda-metrics** | `/dda-metrics [add\|list\|debug\|export\|configure-collection]` | Instrument player metrics. Use `add custom` for wizard to design custom metrics with guided collection setup |
+| **dda-test** | `/dda-test [simulate\|batch\|validate\|compare-providers]` | Test LLM adjustments offline. Use `simulate custom` for custom player profiles or `compare-providers` to test both LLM providers |
+| **dda-evaluate** | `/dda-evaluate [compare\|report\|analyze-logs\|configure-baseline]` | Evaluate DDA quality. Use `configure-baseline` to define rule-based comparison or `report custom` for custom analysis |
+| **dda-integrate** | `/dda-integrate [wire\|verify\|debug\|list-mappings]` | Wire LLM output to game systems. Use `configure-mapping <variable>` to choose integration method or `list-mappings` to view config |
 
-### Recommended Workflow
+### Recommended Workflows
 
+#### Quick Start (Default Setup)
 1. `/dda-scaffold all` — Generate all component skeletons
 2. `/dda-metrics list` — Review available data sources, then `add` custom metrics
 3. `/dda-prompt generate` — Create the SPAR prompt
@@ -114,6 +128,39 @@ This project includes Claude Code skills for implementing LLM-based Dynamic Diff
 5. `/dda-test batch` — Run simulations with synthetic player profiles
 6. `/dda-evaluate compare` — Compare LLM vs rule-based outputs
 7. `/dda-prompt improve` — Iterate on prompt based on evaluation results
+
+#### Custom Setup (Full Control)
+1. `/dda-scaffold configure` — **Interactive wizard** to choose variables, metrics, LLM provider, thresholds, and wiring methods
+2. `/dda-metrics add custom` — Design custom metrics (e.g., "hesitation score", "near-miss count")
+3. `/dda-metrics configure-collection <metric>` — Choose how each metric is collected (event, polling, derived)
+4. `/dda-prompt generate custom` — Customize SPAR prompt (CoT style, examples, aggressiveness)
+5. `/dda-integrate configure-mapping <variable>` — Choose integration method per variable (setter, reflection, custom)
+6. `/dda-integrate list-mappings` — Verify all mappings are configured
+7. `/dda-test simulate custom` — Create and test custom player profiles
+8. `/dda-evaluate configure-baseline` — Define custom rule-based baseline
+9. `/dda-evaluate report custom` — Generate custom evaluation report
+
+#### Multi-Provider Comparison
+1. Set up both Gemini and Claude API keys in LLMPolicyEngine
+2. `/dda-prompt compare-providers` — Generate optimized prompts for each provider
+3. `/dda-test compare-providers` — Run same scenarios on both providers
+4. `/dda-evaluate compare` — Analyze which provider performs better for your use case
+
+### Configuration File
+
+All custom settings are saved to `Assets/Scripts/RedRunner/DDA/dda_config.json`:
+- Selected difficulty variables and their mappings
+- Custom metrics and collection methods
+- Symptom classification thresholds
+- Integration preferences (setters vs reflection vs custom)
+- Prompt customizations
+- Rule-based baseline configuration
+
+This allows you to:
+- Reuse your setup across skill invocations
+- Version control your DDA configuration
+- Share configurations with teammates
+- Quickly switch between different DDA strategies
 
 ### DDA File Locations
 - DDA scripts: `Assets/Scripts/RedRunner/DDA/`

@@ -12,7 +12,10 @@ You help students evaluate their LLM-based DDA implementation by comparing it ag
 ## Arguments
 
 - `compare` — Compare LLM outputs against rule-based outputs for the same inputs
+- `compare-providers` — Run the same simulations on both Gemini and Claude and compare outputs side-by-side (requires both API keys)
+- `configure-baseline` — Interactively define or modify the rule-based baseline for comparison
 - `report` — Generate a full evaluation report from batch test results or session logs
+- `report custom` — Generate a custom report with user-selected metrics and visualizations
 - `analyze-logs` — Read session logs from `Application.persistentDataPath/DDALogs/` and analyze trends
 - If no argument, default to `compare`
 
@@ -71,7 +74,8 @@ Generate a markdown report including:
 ```markdown
 # DDA Evaluation Report
 Date: {date}
-Model: {model_id}
+Provider: {provider} (Gemini or Claude)
+Model: {model_id} (e.g., gemini-2.0-flash or claude-sonnet-4-5-20250929)
 Simulations Run: {count}
 
 ## Summary Statistics
@@ -87,6 +91,10 @@ Simulations Run: {count}
 1. [Auto-generated observation about where LLM agreed/disagreed with rules]
 2. [Auto-generated observation about context sensitivity]
 3. [Auto-generated observation about any hallucinations or threshold violations]
+
+## Provider Notes
+- [Note any provider-specific behaviors, e.g., Gemini wrapping in code fences, response format quirks]
+- [For cross-provider comparison: note if results differ significantly between Gemini and Claude]
 
 ## Comparison with Paper Results
 [Compare findings to the paper's 5 simulations if applicable]
@@ -126,3 +134,55 @@ The paper identifies these positive outcomes to check for:
 5. **Smooth transitions**: Changes don't cause jarring difficulty spikes
 
 Flag any simulation where these criteria are violated.
+
+## Interactive Configuration
+
+When `configure-baseline` is invoked:
+
+1. **Baseline type**
+   - Fixed percentage adjustments (simple, like the paper's example)
+   - Linear interpolation based on symptom severity
+   - Custom formula per variable
+   - Import from existing script
+
+2. **Adjustment magnitudes**
+   - For each symptom level (very_low, low, slightly_low, normal, slightly_high, high, sharply_high):
+     - What % adjustment for player-harming variables?
+     - What % adjustment for player-helping variables?
+
+3. **Per-variable overrides** (optional)
+   - Should any specific variable have different adjustment rules?
+   - E.g., "Never adjust runSpeed more than 10% at a time"
+
+4. **Save location**
+   - Write to `RuleBasedBaseline.cs`
+   - Save as config JSON (for runtime switching)
+   - Both
+
+When `report custom` is invoked:
+
+1. **Report sections to include**
+   - Summary statistics (always included)
+   - Per-simulation tables
+   - Comparison with rules
+   - Provider comparison (if available)
+   - Trend analysis from logs
+   - Visualizations (ASCII charts)
+
+2. **Metrics to focus on**
+   - Direction match rate
+   - Smoothness score
+   - Threshold compliance
+   - Context sensitivity
+   - Custom metric
+
+3. **Output format**
+   - Markdown (.md)
+   - JSON (for further processing)
+   - HTML (for web viewing)
+   - Plain text
+
+4. **Comparison depth**
+   - High-level only (just summary)
+   - Detailed (variable-by-variable)
+   - Deep dive (include LLM reasoning if available)

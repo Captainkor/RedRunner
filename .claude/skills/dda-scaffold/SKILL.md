@@ -11,8 +11,9 @@ You are scaffolding Dynamic Difficulty Adjustment components for the RedRunner U
 
 ## Arguments
 
-- `$ARGUMENTS` can be one of: `all`, `metrics`, `analyzer`, `policy`, `effector`, `profile`, or a custom component name.
+- `$ARGUMENTS` can be one of: `all`, `metrics`, `analyzer`, `policy`, `effector`, `profile`, `configure`, or a custom component name.
 - If no argument, scaffold all components.
+- `configure` — Interactive configuration wizard to choose which variables to track, thresholds, LLM provider, etc.
 
 ## Project Conventions (MUST follow)
 
@@ -70,16 +71,37 @@ Classifies player performance into symptoms:
 ### 4. LLMPolicyEngine (MonoBehaviour) — PLAN
 Location: `Assets/Scripts/RedRunner/DDA/LLMPolicyEngine.cs`
 
-Replaces rule-based policy with LLM API calls:
-- `[SerializeField] string m_ApiKey` — Claude API key
-- `[SerializeField] string m_ModelId` — default "claude-sonnet-4-5-20250929"
+Replaces rule-based policy with LLM API calls. **Supports multiple providers** via `LLMProvider` enum.
+
+#### Provider Support
+```csharp
+public enum LLMProvider { Gemini, Claude }
+```
+- `[SerializeField] LLMProvider m_Provider` — default `Gemini` (free tier, recommended for classroom)
+- `[SerializeField] string m_ApiKey` — API key for the selected provider
+  - Gemini: Get free key at https://aistudio.google.com/apikey (10 RPM, ~1000 req/day)
+  - Claude: Get key at https://console.anthropic.com/ (paid, $3/$15 per 1M tokens)
+- `[SerializeField] string m_ModelId` — leave empty for provider defaults:
+  - Gemini default: `gemini-2.0-flash`
+  - Claude default: `claude-sonnet-4-5-20250929`
+
+#### API Details
+- **Gemini**: POST to `https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={apiKey}`
+  - Body: `{"contents":[{"parts":[{"text":"..."}]}],"generationConfig":{"maxOutputTokens":1024,"temperature":0.2}}`
+  - Response: `{"candidates":[{"content":{"parts":[{"text":"..."}]}}]}`
+  - Gemini may wrap JSON in markdown code fences — include `StripMarkdownCodeFences()` method
+- **Claude**: POST to `https://api.anthropic.com/v1/messages`
+  - Headers: `x-api-key`, `anthropic-version`, `content-type`
+  - Body: `{"model":"...","max_tokens":1024,"system":"...","messages":[...]}`
+  - Response: `{"content":[{"text":"..."}]}`
+
+#### Common Fields
 - `[SerializeField] int m_MaxExampleBufferSize` — default 5
 - `[SerializeField] DifficultyProfile m_CurrentProfile`
-- `[SerializeField] [TextArea(10, 30)] string m_SystemPrompt` — editable in Inspector
-- Prompt construction following SPAR format: Situation, Purpose, Action, Examples, Request
+- `[SerializeField] [TextArea(10, 30)] string m_SystemPrompt` — editable in Inspector, SPAR format
 - Example buffer: `List<string>` storing recent input-output JSON pairs, injected into prompt
 - Method: `Coroutine RequestAdjustment(string metricsJson, string symptom, Action<DifficultyProfile> onResult)`
-- Uses `UnityWebRequest` to POST to `https://api.anthropic.com/v1/messages`
+- Provider-specific request building and response parsing methods
 - JSON response parsing with threshold validation
 - Error handling: log warnings, fall back to current profile on failure
 
@@ -109,12 +131,49 @@ Singleton orchestrating the full MAPE-K loop:
 - Configurable: `[SerializeField] float m_MinTimeBetweenAdjustments` — prevent rapid fire
 - Event: `static event Action<DifficultyProfile> OnDifficultyChanged`
 
+## Interactive Configuration Mode
+
+When `configure` is invoked, guide the user through these choices:
+
+1. **Which difficulty variables to use?**
+   - Show the full list of 8 standard variables
+   - Let user select subset or add custom variables
+   - For each variable, ask: description, threshold min/max, help/harm classification
+
+2. **Which metrics to track?**
+   - Show standard metrics (distanceTraveled, deathCount, etc.)
+   - Let user add custom metrics (e.g., "time near enemies", "precision landing score")
+   - For each custom metric, ask: how to collect it? (event subscription, polling, derived calculation)
+
+3. **LLM Provider setup**
+   - Choose provider: Gemini (free, 10 RPM), Claude (paid), or both (for A/B testing)
+   - Guide API key setup
+   - Suggest model IDs or allow custom
+
+4. **Symptom classification thresholds**
+   - Show example thresholds for each metric
+   - Let user customize (e.g., "what distance counts as 'good' performance?")
+
+5. **Effector wiring preferences**
+   - For each variable, ask: "How should this wire to the game?"
+   - Suggest default mappings, allow custom (e.g., "runSpeed → RedCharacter.m_RunSpeed" or "runSpeed → custom system")
+   - Choose integration approach: direct setters, reflection, or manual
+
+6. **Save configuration to JSON**
+   - Save choices to `Assets/Scripts/RedRunner/DDA/dda_config.json`
+   - Use this config to scaffold components with user's exact needs
+
+After configuration, scaffold components according to the saved preferences.
+
 ## After Scaffolding
 
 1. Create a `DDA` subfolder in `Assets/Prefabs/` for a DDA Manager prefab
-2. Remind the student to:
+2. If configuration was used, print a summary of the custom setup
+3. Otherwise remind the student to:
    - Create a DifficultyProfile ScriptableObject asset via the Create menu
    - Add the DDAManager to the scene or an existing manager prefab
-   - Set their API key in the Inspector
+   - Select their LLM provider in the Inspector (Gemini recommended for free tier)
+   - Get an API key: Gemini at https://aistudio.google.com/apikey (free) or Claude at https://console.anthropic.com/ (paid)
+   - Paste the API key in the Inspector
    - Configure symptom thresholds
-3. Print a summary of all created files and what the student should do next
+4. Print a summary of all created files and what the student should do next

@@ -12,7 +12,9 @@ You help students instrument player behavior metrics for the MAPE-K Monitor phas
 ## Arguments
 
 - `add <metric-name>` — Add a new metric to PlayerMetricsCollector (e.g., `add hesitationScore`)
+- `add custom` — Interactive wizard to design and add a custom metric with guidance
 - `list` — Show all currently tracked metrics and where they hook into game systems
+- `configure-collection <metric-name>` — Choose how to collect a specific metric (event, polling, derived)
 - `debug` — Read PlayerMetricsCollector.cs, identify potential bugs (missing unsubscribes, null refs, division by zero)
 - `export` — Add or update JSON export functionality for session logs
 - If no argument, default to `list`
@@ -125,6 +127,42 @@ Check for these common issues:
 - Metrics not resetting between runs (must subscribe to `GameManager.OnReset`)
 - Polling in `Update()` when game is paused (`Time.timeScale = 0` means `Time.deltaTime = 0`)
 - Use `Time.unscaledDeltaTime` for time tracking if needed during pause
+
+## Custom Metric Wizard
+
+When `add custom` is invoked, guide the user through:
+
+1. **Metric name and description**
+   - What are you measuring? (e.g., "player hesitation", "near-miss count")
+
+2. **Data type**
+   - float, int, bool, Vector2, custom struct?
+
+3. **Collection method**
+   - **Event-based**: Subscribe to existing events (show available events from the table)
+   - **Polling**: Check state each frame in Update() (show available pollable fields)
+   - **Derived**: Calculate from other metrics (e.g., `hesitationScore = timeWithLowSpeed / totalRunTime`)
+
+4. **When to reset?**
+   - On run start (GameManager.OnReset)
+   - On death
+   - Never (lifetime accumulation)
+
+5. **Include in LLM input?**
+   - Yes: Add to MetricsData and GetMetricsJson()
+   - No: For debugging/internal use only
+
+6. **Thresholds for symptoms** (optional)
+   - What value range is "good" vs "bad" for this metric?
+
+7. **Generate the code**
+   - Add field declaration
+   - Add collection logic (event subscription or Update polling)
+   - Add to JSON export
+   - Add to ResetMetrics()
+   - Update dda_config.json with the new metric
+
+When `configure-collection <metric-name>` is invoked, allow changing the collection method for an existing metric.
 
 ## Session Log Export Format
 

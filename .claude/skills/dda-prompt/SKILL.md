@@ -12,9 +12,11 @@ You help students design and iterate on prompts for the LLM Policy Engine follow
 ## Arguments
 
 - `generate` — Create a new SPAR prompt from scratch based on RedRunner's game variables
+- `generate custom` — Interactive wizard to customize the SPAR prompt (choose variables, examples, reasoning style)
 - `improve` — Read the current prompt in LLMPolicyEngine.cs and suggest improvements
 - `test` — Dry-run the prompt with sample inputs (print what would be sent, no API call)
 - `show` — Display the current prompt with annotations explaining each section
+- `compare-providers` — Generate provider-specific optimizations (Gemini vs Claude prompt tuning)
 - If no argument, default to `generate`
 
 ## SPAR Prompt Format (from the paper)
@@ -87,6 +89,26 @@ When generating prompts, use these exact variable names and thresholds:
 | coinDensity | Coin spawn rate in blocks | [0.1, 1.0] | Helps |
 | platformHeightVariance | Y-offset randomness of platforms | [0.0, 3.0] | Harms |
 
+## Provider-Specific Prompt Considerations
+
+The `LLMPolicyEngine` supports multiple providers. The same SPAR prompt is used for all providers, but there are behavioral differences:
+
+### Gemini (default, free tier)
+- **Temperature**: Set to 0.2 for more deterministic JSON output
+- **Code fence wrapping**: Gemini may wrap JSON output in ` ```json ... ``` ` markdown fences. The engine strips these automatically via `StripMarkdownCodeFences()`, but the prompt should still explicitly request "Respond with JSON only, no markdown formatting"
+- **Free tier limits**: 10 requests per minute, ~1000 requests per day. Sufficient for classroom demos
+- **Model**: `gemini-2.0-flash` — fast, cheap, good at structured JSON output
+
+### Claude (paid)
+- **Temperature**: Default (not explicitly set)
+- **Clean JSON**: Claude typically returns clean JSON without code fences when instructed
+- **Model**: `claude-sonnet-4-5-20250929` — higher quality reasoning but costs $3/$15 per 1M tokens
+
+### Prompt Best Practices for Both Providers
+- Always include "Respond ONLY with the JSON object" in the prompt
+- Include thresholds in the request JSON to prevent hallucinated values
+- Both providers handle few-shot examples well — always include 2+ examples
+
 ## Quality Checklist
 
 When generating or reviewing a prompt, verify:
@@ -98,6 +120,51 @@ When generating or reviewing a prompt, verify:
 - [ ] Output format is specified as JSON-only (no markdown, no explanation)
 - [ ] Gradual adjustment guidance is included (prevent jarring changes)
 - [ ] At least 2 few-shot examples with different symptoms
+- [ ] Prompt works with both Gemini and Claude (provider-agnostic language)
+
+## Custom Prompt Wizard
+
+When `generate custom` is invoked, guide the user through:
+
+1. **Which variables to include in the prompt?**
+   - Show all variables from dda_config.json or defaults
+   - Let user select subset (e.g., only player-helping vars, only enemy-related)
+
+2. **Chain-of-Thought style**
+   - **Step-by-step** (default from paper): Explicit numbered reasoning steps
+   - **Natural**: "Consider the symptom and adjust accordingly..."
+   - **Minimal**: Just output format, no reasoning guidance
+   - **Custom**: User writes their own CoT instructions
+
+3. **Few-shot examples**
+   - How many examples? (0-5 recommended)
+   - Auto-generate examples from test scenarios or let user write custom
+   - Cover which symptom types? (all 7, or just low/normal/high)
+
+4. **Adjustment aggressiveness**
+   - Conservative: "Make gradual 5-10% changes"
+   - Moderate: "Make 10-20% changes"
+   - Aggressive: "Make bold 20-30% changes"
+   - Context-aware: "Adjust based on how extreme current values are"
+
+5. **Output format strictness**
+   - Strict JSON-only (default)
+   - Allow brief explanation before JSON
+   - Request confidence scores per variable
+
+6. **Provider-specific tuning** (if applicable)
+   - For Gemini: Add explicit "no markdown" instruction
+   - For Claude: Leverage system prompt vs user message structure
+   - For both: Temperature/token settings
+
+7. **Save and preview**
+   - Show the generated prompt
+   - Offer to write to LLMPolicyEngine.cs or save as separate .txt for review
+
+When `compare-providers` is invoked:
+- Generate two versions of the prompt optimized for Gemini and Claude
+- Highlight differences (e.g., Gemini's markdown wrapping, Claude's system prompt structure)
+- Suggest testing both to compare output quality
 
 ## When Improving
 
