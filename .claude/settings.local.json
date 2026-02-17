@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -c \"import fitz; doc=fitz.open\\(r''C:\\\\Users\\\\shyy1\\\\Downloads\\\\32000-1514-26220-1-10-20241216.pdf''\\); [print\\(doc[i].get_text\\(\\)\\) for i in range\\(min\\(20, len\\(doc\\)\\)\\)]\")",
+      "Bash(python3:*)",
+      "Bash(\"C:\\\\Python313\\\\python.exe\" -c \"import fitz; doc=fitz.open\\(r''C:\\\\Users\\\\shyy1\\\\Downloads\\\\32000-1514-26220-1-10-20241216.pdf''\\); [print\\(doc[i].get_text\\(\\)\\) for i in range\\(min\\(20, len\\(doc\\)\\)\\)]\")",
+      "Bash(\"C:\\\\Python313\\\\python.exe\" -m pip:*)",
+      "Bash(\"C:\\\\Python313\\\\python.exe\" -c:*)",
+      "Bash(\"C:\\\\Python313\\\\python.exe\" -c \"\nimport fitz\ndoc = fitz.open\\(r''C:\\\\Users\\\\shyy1\\\\Downloads\\\\32000-1514-26220-1-10-20241216.pdf''\\)\nfor i in range\\(min\\(20, len\\(doc\\)\\)\\):\n    print\\(f''--- PAGE {i+1} ---''\\)\n    print\\(doc[i].get_text\\(\\)\\)\n\")"
+    ]
+  }
+}
