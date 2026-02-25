@@ -127,27 +127,28 @@ When generating or reviewing a prompt, verify:
 
 ## Interaction Guidelines (CRITICAL for CLI)
 
-When asking the user to choose between options, you MUST follow this pattern for every question:
+**Do NOT use the AskUserQuestion tool.** It does not work reliably in all environments (Rider, CLI, etc.).
 
-1. **Always print a descriptive header** explaining what this step configures and why it matters
-2. **Always describe each option in full** in your message text BEFORE calling AskUserQuestion
-3. **Use descriptive labels** in AskUserQuestion options — never just numbers or short codes
-4. **Include the option description** in the AskUserQuestion `description` field for each option
+Instead, ask questions as **plain chat messages**. Print the question with numbered options, then **STOP and wait for the user to reply**. Do NOT call any tools — just print the question and end your turn.
+
+Rules:
+- **One question per message.** Ask one thing, stop, wait for the reply.
+- **Use numbered options** so the user can just type a number.
+- **Mark the recommended default** with "← recommended".
+- **If the user says "default"**, apply the recommended option and move on.
 
 Example of CORRECT interaction:
 ```
-### Step 2: Chain-of-Thought Reasoning Style
+### Chain-of-Thought Reasoning Style
 
-This controls how the prompt guides the LLM's reasoning process before it outputs the adjusted values.
+This controls how the prompt guides the LLM's reasoning before outputting adjusted values.
 
-- **Step-by-step** (default from paper): Explicit numbered reasoning steps. Most reliable for structured output.
-- **Natural**: Free-form reasoning ("Consider the symptom and adjust accordingly..."). More flexible but less predictable.
-- **Minimal**: Just the output format spec, no reasoning guidance. Fastest but may produce lower quality.
-- **Custom**: You write your own CoT instructions.
+1. **Step-by-step** ← recommended — Explicit numbered reasoning steps. Most reliable for structured output.
+2. **Natural** — Free-form reasoning. More flexible but less predictable.
+3. **Minimal** — Just the output format spec, no reasoning guidance. Fastest but lower quality.
+4. **Custom** — You write your own CoT instructions.
 ```
-Then call AskUserQuestion with labels like "Step-by-step (Recommended)", "Natural", "Minimal", "Custom" — each with a description.
-
-**NEVER** present bare numbers or short labels without context. Always explain what each choice means and its trade-offs.
+Then STOP and wait for the user to reply with a number.
 
 ## Custom Prompt Wizard
 

@@ -168,28 +168,28 @@ Per-Variable Sensitivity Compliance:
 
 ## Interaction Guidelines (CRITICAL for CLI)
 
-When asking the user to choose between options, you MUST follow this pattern for every question:
+**Do NOT use the AskUserQuestion tool.** It does not work reliably in all environments (Rider, CLI, etc.).
 
-1. **Always print a descriptive header** explaining what this step configures and why it matters
-2. **Always describe each option in full** in your message text BEFORE calling AskUserQuestion
-3. **Use descriptive labels** in AskUserQuestion options — never just numbers or short codes
-4. **Include the option description** in the AskUserQuestion `description` field for each option
+Instead, ask questions as **plain chat messages**. Print the question with numbered options, then **STOP and wait for the user to reply**. Do NOT call any tools — just print the question and end your turn.
+
+Rules:
+- **One question per message.** Ask one thing, stop, wait for the reply.
+- **Use numbered options** so the user can just type a number.
+- **Mark the recommended default** with "← recommended".
+- **If the user says "default"**, apply the recommended option and move on.
 
 Example of CORRECT interaction:
 ```
-### Step 1: Baseline Type
+### Baseline Type
 
 This determines how the rule-based comparison system calculates adjustments.
-The rule-based baseline is what you compare your LLM outputs against.
 
-- **Fixed percentage**: Simple symmetric % changes per symptom level (e.g., low → -20% harming, +20% helping). Matches the paper's Table 1 approach.
-- **Linear interpolation**: Scales adjustment size linearly with symptom severity. Smoother transitions.
-- **Tendency-aware**: Uses your configured tendency from dda_config.json so rules and LLM share the same bias. Fairest comparison.
-- **Custom formula**: You write custom adjustment logic per variable.
+1. **Fixed percentage** ← recommended — Simple symmetric % changes per symptom level. Matches the paper's Table 1 approach.
+2. **Linear interpolation** — Scales adjustment size linearly with symptom severity. Smoother transitions.
+3. **Tendency-aware** — Uses your configured tendency from dda_config.json. Fairest comparison.
+4. **Custom formula** — You write custom adjustment logic per variable.
 ```
-Then call AskUserQuestion with labels like "Fixed percentage (Recommended)", "Linear interpolation", "Tendency-aware", "Custom formula" — each with a description.
-
-**NEVER** present bare numbers or short labels without context. Always explain what each choice means and its trade-offs.
+Then STOP and wait for the user to reply with a number.
 
 ## Interactive Configuration
 

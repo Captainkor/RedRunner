@@ -22,12 +22,15 @@ You help students fine-tune their DDA system's behavior after it has been scaffo
 
 ## Interaction Guidelines (CRITICAL for CLI)
 
-When asking the user to choose between options, you MUST follow this pattern for every question:
+**Do NOT use the AskUserQuestion tool.** It does not work reliably in all environments (Rider, CLI, etc.).
 
-1. **Always print a descriptive header** explaining what this step configures and why it matters
-2. **Always describe each option in full** in your message text BEFORE calling AskUserQuestion
-3. **Use descriptive labels** in AskUserQuestion options — never just numbers or short codes
-4. **Include the option description** in the AskUserQuestion `description` field for each option
+Instead, ask questions as **plain chat messages**. Print the question with numbered options, then **STOP and wait for the user to reply**. Do NOT call any tools — just print the question and end your turn.
+
+Rules:
+- **One question per message.** Ask one thing, stop, wait for the reply.
+- **Use numbered options** so the user can just type a number.
+- **Mark the recommended default** with "← recommended".
+- **If the user says "default"**, apply the recommended option and move on.
 
 Example of CORRECT interaction for tendency:
 ```
@@ -36,32 +39,27 @@ Example of CORRECT interaction for tendency:
 The tendency controls whether your DDA system prioritizes helping struggling players or challenging skilled ones.
 Your current tendency is: **symmetric**
 
-- **Protective**: Eases difficulty faster for struggling players (ease: 1.5x, harden: 0.8x). Best for casual/accessible games.
-- **Punishing**: Ramps difficulty faster for skilled players (ease: 0.8x, harden: 1.5x). Best for competitive/hardcore games.
-- **Symmetric**: Equal adjustment speed in both directions (1.0x each). Neutral default.
-- **Custom**: You set exact ease/harden multipliers.
+1. **Protective** — Eases difficulty faster for struggling players (ease: 1.5x, harden: 0.8x). Best for casual games.
+2. **Punishing** — Ramps difficulty faster for skilled players (ease: 0.8x, harden: 1.5x). Best for hardcore games.
+3. **Symmetric** ← current — Equal adjustment speed in both directions (1.0x each).
+4. **Custom** — You set exact ease/harden multipliers.
 ```
-Then call AskUserQuestion with labels like "Protective", "Punishing", "Symmetric", "Custom" — each with a full description.
+Then STOP and wait for the user to reply with a number.
 
 Example of CORRECT interaction for bias:
 ```
 ### Adjust Bias for enemyDensity
 
-Current settings:
-  Sensitivity: 1.0 (normal)
-  Priority: medium
-  Direction lock: none
+Current: Sensitivity 1.0, Priority medium, Direction lock none
 
-Sensitivity controls how aggressively this variable changes (0.0-2.0):
-  0.0 = locked (never changes)
-  0.5 = conservative (half-sized adjustments)
-  1.0 = normal (default)
-  1.5 = aggressive (50% larger adjustments)
-  2.0 = very aggressive (double-sized adjustments)
+What would you like to change?
+
+1. **Sensitivity** — How aggressively this variable changes (0.0=locked, 0.5=conservative, 1.0=normal, 1.5=aggressive, 2.0=very aggressive)
+2. **Priority** — When the LLM can't adjust everything, should this change first? (low/medium/high)
+3. **Direction lock** — Force increase-only, decrease-only, or allow both
+4. **Done** — Keep current settings
 ```
-Then ask what to change with clear option labels.
-
-**NEVER** present bare numbers without explaining what each means.
+Then STOP and wait for the user to reply.
 
 ## How It Works
 
