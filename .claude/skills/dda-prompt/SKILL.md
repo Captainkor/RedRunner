@@ -121,6 +121,33 @@ When generating or reviewing a prompt, verify:
 - [ ] Gradual adjustment guidance is included (prevent jarring changes)
 - [ ] At least 2 few-shot examples with different symptoms
 - [ ] Prompt works with both Gemini and Claude (provider-agnostic language)
+- [ ] If dda_config.json has tendency/bias settings, they are reflected in the Action section
+- [ ] Per-variable sensitivity values are included in the Request JSON (if configured)
+- [ ] Few-shot examples reflect the configured tendency (e.g., protective examples show bigger ease-down changes)
+
+## Interaction Guidelines (CRITICAL for CLI)
+
+When asking the user to choose between options, you MUST follow this pattern for every question:
+
+1. **Always print a descriptive header** explaining what this step configures and why it matters
+2. **Always describe each option in full** in your message text BEFORE calling AskUserQuestion
+3. **Use descriptive labels** in AskUserQuestion options — never just numbers or short codes
+4. **Include the option description** in the AskUserQuestion `description` field for each option
+
+Example of CORRECT interaction:
+```
+### Step 2: Chain-of-Thought Reasoning Style
+
+This controls how the prompt guides the LLM's reasoning process before it outputs the adjusted values.
+
+- **Step-by-step** (default from paper): Explicit numbered reasoning steps. Most reliable for structured output.
+- **Natural**: Free-form reasoning ("Consider the symptom and adjust accordingly..."). More flexible but less predictable.
+- **Minimal**: Just the output format spec, no reasoning guidance. Fastest but may produce lower quality.
+- **Custom**: You write your own CoT instructions.
+```
+Then call AskUserQuestion with labels like "Step-by-step (Recommended)", "Natural", "Minimal", "Custom" — each with a description.
+
+**NEVER** present bare numbers or short labels without context. Always explain what each choice means and its trade-offs.
 
 ## Custom Prompt Wizard
 
@@ -147,17 +174,53 @@ When `generate custom` is invoked, guide the user through:
    - Aggressive: "Make bold 20-30% changes"
    - Context-aware: "Adjust based on how extreme current values are"
 
-5. **Output format strictness**
+5. **Difficulty tendency & per-variable bias** (reads from `dda_config.json` if configured via `/dda-scaffold configure`)
+
+   If the config file contains tendency/bias settings, inject them into the SPAR prompt's Action section:
+
+   **Tendency → Prompt instructions:**
+   - **Protective**: "IMPORTANT: When the player is struggling (low/very.low symptoms), make MORE aggressive adjustments (15-25% changes). When the player is dominating (high/sharply.high), make SMALLER, cautious adjustments (5-10%). Err on the side of helping."
+   - **Punishing**: "IMPORTANT: When the player is dominating (high/sharply.high symptoms), make MORE aggressive adjustments (15-25%). When the player is struggling (low/very.low), make SMALLER, cautious adjustments (5-10%). The game should push skilled players."
+   - **Symmetric**: (no extra instruction, default behavior)
+   - **Custom**: Inject the custom easeMultiplier/hardenMultiplier as instructions: "When easing difficulty, scale changes by {easeMultiplier}x. When hardening, scale by {hardenMultiplier}x."
+
+   **Per-variable bias → Prompt variable annotations:**
+   Add sensitivity and priority metadata to each variable in the Request JSON:
+   ```json
+   {
+     "description": "enemyDensity",
+     "threshold": [0.0, 1.0],
+     "value": 0.6,
+     "sensitivity": 1.5,
+     "priority": "high",
+     "note": "Adjust this variable more aggressively than others"
+   }
+   ```
+
+   And add to the Action section:
+   ```
+   9. Pay attention to each variable's "sensitivity" field:
+      - sensitivity > 1.0: adjust this variable MORE aggressively
+      - sensitivity < 1.0: adjust this variable MORE conservatively
+      - sensitivity = 0.0: do NOT change this variable
+   10. Prioritize "high" priority variables over "low" priority ones when making trade-offs.
+   ```
+
+   **If no config exists**, ask the student directly during `generate custom`:
+   - "Should the system favor helping struggling players or challenging skilled ones?"
+   - "Are there variables you want the LLM to change more aggressively? Less aggressively? Lock entirely?"
+
+6. **Output format strictness**
    - Strict JSON-only (default)
    - Allow brief explanation before JSON
    - Request confidence scores per variable
 
-6. **Provider-specific tuning** (if applicable)
+7. **Provider-specific tuning** (if applicable)
    - For Gemini: Add explicit "no markdown" instruction
    - For Claude: Leverage system prompt vs user message structure
    - For both: Temperature/token settings
 
-7. **Save and preview**
+8. **Save and preview**
    - Show the generated prompt
    - Offer to write to LLMPolicyEngine.cs or save as separate .txt for review
 

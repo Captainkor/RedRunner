@@ -117,6 +117,7 @@ All skills now support **interactive configuration** for customizing your DDA se
 | **dda-test** | `/dda-test [simulate\|batch\|validate\|compare-providers]` | Test LLM adjustments offline. Use `simulate custom` for custom player profiles or `compare-providers` to test both LLM providers |
 | **dda-evaluate** | `/dda-evaluate [compare\|report\|analyze-logs\|configure-baseline]` | Evaluate DDA quality. Use `configure-baseline` to define rule-based comparison or `report custom` for custom analysis |
 | **dda-integrate** | `/dda-integrate [wire\|verify\|debug\|list-mappings]` | Wire LLM output to game systems. Use `configure-mapping <variable>` to choose integration method or `list-mappings` to view config |
+| **dda-tune** | `/dda-tune [show\|tendency\|bias\|harshness\|apply\|reset]` | Fine-tune DDA behavior post-implementation. Adjust tendency (protective/punishing), per-variable sensitivity/priority, and analyzer harshness without re-scaffolding |
 
 ### Recommended Workflows
 
@@ -146,12 +147,37 @@ All skills now support **interactive configuration** for customizing your DDA se
 3. `/dda-test compare-providers` — Run same scenarios on both providers
 4. `/dda-evaluate compare` — Analyze which provider performs better for your use case
 
+#### Post-Implementation Tuning
+1. `/dda-tune show` — View current tendency, bias, and harshness settings
+2. `/dda-tune tendency protective` — Change overall DDA lean (or `punishing`, `symmetric`, `custom`)
+3. `/dda-tune bias enemyDensity` — Adjust sensitivity/priority for a specific variable
+4. `/dda-tune harshness strict` — Make the analyzer more reactive to performance changes
+5. `/dda-tune apply` — Push all config changes to prompt, analyzer, and effector code
+6. `/dda-test batch` — Re-test to see how tuning affects LLM outputs
+
+### Difficulty Tendency & Bias (Design Exercise)
+
+The `/dda-scaffold configure` wizard includes a **difficulty tendency** step where students make key design decisions:
+
+- **Tendency** (protective/punishing/symmetric/custom): Should the system favor helping struggling players or challenging skilled ones?
+- **Per-variable sensitivity** (0.0–2.0): How aggressively should each variable change? (0.0 = locked, 2.0 = very aggressive)
+- **Per-variable priority** (low/medium/high): Which variables should the LLM adjust first?
+- **Direction locks**: Force a variable to only increase, only decrease, or both
+- **Analyzer harshness** (lenient/standard/strict): How easily should the system trigger adjustments?
+
+These settings flow through the entire pipeline:
+- `/dda-prompt generate` injects bias instructions into the SPAR prompt Action section
+- `/dda-integrate` applies sensitivity multipliers in the Effector post-processing
+- `/dda-evaluate configure-baseline` uses tendency to set fair rule-based comparison thresholds
+
 ### Configuration File
 
 All custom settings are saved to `Assets/Scripts/RedRunner/DDA/dda_config.json`:
 - Selected difficulty variables and their mappings
 - Custom metrics and collection methods
 - Symptom classification thresholds
+- **Difficulty tendency and per-variable bias/sensitivity**
+- **Analyzer harshness preset**
 - Integration preferences (setters vs reflection vs custom)
 - Prompt customizations
 - Rule-based baseline configuration

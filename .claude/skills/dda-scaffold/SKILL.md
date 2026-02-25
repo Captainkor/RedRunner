@@ -131,6 +131,39 @@ Singleton orchestrating the full MAPE-K loop:
 - Configurable: `[SerializeField] float m_MinTimeBetweenAdjustments` — prevent rapid fire
 - Event: `static event Action<DifficultyProfile> OnDifficultyChanged`
 
+## Interaction Guidelines (CRITICAL for CLI)
+
+When asking the user to choose between options, you MUST follow this pattern for every question:
+
+1. **Always print a descriptive header** explaining what this step configures and why it matters
+2. **Always describe each option in full** in your message text BEFORE calling AskUserQuestion
+3. **Use descriptive labels** in AskUserQuestion options — never just numbers or short codes
+4. **Include the option description** in the AskUserQuestion `description` field for each option
+
+Example of CORRECT interaction:
+```
+### Step 5a: Overall DDA Tendency
+
+This controls whether your DDA system favors helping struggling players or challenging skilled ones.
+This is a key design decision that affects how the entire pipeline behaves.
+
+- **Protective**: Helps struggling players more aggressively (ease: 15-25%, toughen: 5-10%). Best for casual/accessible games.
+- **Punishing**: Challenges skilled players more aggressively (toughen: 15-25%, ease: 5-10%). Best for competitive/hardcore games.
+- **Symmetric**: Equal adjustment in both directions (10-20%). Neutral approach.
+- **Custom**: You define exact multipliers for easing vs toughening.
+```
+Then call AskUserQuestion with labels like "Protective (Recommended)", "Punishing", "Symmetric", "Custom" — each with a description field.
+
+Example of WRONG interaction:
+```
+Choose a tendency:
+```
+Then call AskUserQuestion with labels "1", "2", "3", "4".
+
+**For multi-select questions** (like choosing variables), always list every option with its full description before asking.
+
+**For numeric inputs** (like sensitivity 0.0-2.0), explain the scale with examples before asking.
+
 ## Interactive Configuration Mode
 
 When `configure` is invoked, guide the user through these choices:
@@ -154,14 +187,69 @@ When `configure` is invoked, guide the user through these choices:
    - Show example thresholds for each metric
    - Let user customize (e.g., "what distance counts as 'good' performance?")
 
-5. **Effector wiring preferences**
+5. **Difficulty tendency & bias (NEW — Design Exercise)**
+
+   This is a key design decision for students. How should the DDA system lean when adjusting difficulty?
+
+   **a. Overall DDA tendency:**
+   - **Protective** (default): Prioritizes helping struggling players (decreases difficulty faster, increases slower)
+   - **Punishing**: Prioritizes challenging dominant players (increases difficulty faster, decreases slower)
+   - **Symmetric**: Equal adjustment speed in both directions
+   - **Custom**: Student defines asymmetric multipliers
+
+   **b. Per-variable adjustment bias (weight):**
+   For each selected variable, ask:
+   - **Sensitivity** (0.0–2.0, default 1.0): How aggressively should this variable change?
+     - 0.0 = locked (never adjust)
+     - 0.5 = conservative (half adjustments)
+     - 1.0 = normal
+     - 1.5 = aggressive
+     - 2.0 = very aggressive
+   - **Priority** (low/medium/high): When the LLM can't adjust everything, which variables should change first?
+   - **Direction lock** (optional): Force a variable to only increase, only decrease, or both
+
+   Example config:
+   ```json
+   {
+     "tendency": "protective",
+     "easeMultiplier": 1.5,
+     "hardenMultiplier": 0.8,
+     "variableBias": {
+       "enemyDensity": { "sensitivity": 1.5, "priority": "high", "directionLock": "none" },
+       "runSpeed": { "sensitivity": 0.5, "priority": "medium", "directionLock": "none" },
+       "jumpStrength": { "sensitivity": 1.0, "priority": "high", "directionLock": "increase_only" },
+       "coinDensity": { "sensitivity": 1.2, "priority": "low", "directionLock": "none" }
+     }
+   }
+   ```
+
+   **How this maps to code:**
+   - **In the SPAR prompt** (`LLMPolicyEngine.m_SystemPrompt`): Inject bias instructions into the Action section. E.g., for "protective" tendency: "When the player is struggling (low/very.low symptoms), make MORE aggressive adjustments (15-25%). When the player is dominating (high/sharply.high), make SMALLER adjustments (5-10%)."
+   - **In the prompt's variable list**: Add a `"sensitivity"` field to each variable in the Request JSON so the LLM knows which to prioritize
+   - **In `DifficultyEffector.ApplyProfile()`**: Post-process LLM output by scaling deltas with per-variable sensitivity. E.g., `actualDelta = llmDelta * sensitivity`
+   - **In `DDAAnalyzer`**: Bias the symptom classification — a "protective" system could shift the symptom one level toward "struggling" (making the system more likely to ease up)
+
+   **c. Analyzer harshness:**
+   - **Lenient**: Wider "normal" band — player has to be really struggling/dominating before DDA kicks in
+   - **Standard** (default): Paper's default thresholds
+   - **Strict**: Narrow "normal" band — DDA reacts to small performance variations
+   - **Custom**: Student sets each threshold boundary manually
+
+   This controls `DDAAnalyzer` thresholds:
+   - Lenient: death rate "normal" band = [1.5, 5.0], survival time "normal" band = [8, 30]
+   - Standard: death rate "normal" band = [2.0, 4.0], survival time "normal" band = [10, 25]
+   - Strict: death rate "normal" band = [2.5, 3.5], survival time "normal" band = [15, 22]
+
+6. **Effector wiring preferences**
    - For each variable, ask: "How should this wire to the game?"
    - Suggest default mappings, allow custom (e.g., "runSpeed → RedCharacter.m_RunSpeed" or "runSpeed → custom system")
    - Choose integration approach: direct setters, reflection, or manual
 
-6. **Save configuration to JSON**
-   - Save choices to `Assets/Scripts/RedRunner/DDA/dda_config.json`
+7. **Save configuration to JSON**
+   - Save ALL choices (including tendency, bias, harshness) to `Assets/Scripts/RedRunner/DDA/dda_config.json`
    - Use this config to scaffold components with user's exact needs
+   - The config is read by `/dda-prompt generate` to inject bias instructions into the SPAR prompt
+   - The config is read by `/dda-evaluate configure-baseline` to set comparison thresholds
 
 After configuration, scaffold components according to the saved preferences.
 

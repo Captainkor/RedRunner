@@ -128,6 +128,29 @@ Check for these common issues:
 - Polling in `Update()` when game is paused (`Time.timeScale = 0` means `Time.deltaTime = 0`)
 - Use `Time.unscaledDeltaTime` for time tracking if needed during pause
 
+## Interaction Guidelines (CRITICAL for CLI)
+
+When asking the user to choose between options, you MUST follow this pattern for every question:
+
+1. **Always print a descriptive header** explaining what this step configures and why it matters
+2. **Always describe each option in full** in your message text BEFORE calling AskUserQuestion
+3. **Use descriptive labels** in AskUserQuestion options — never just numbers or short codes
+4. **Include the option description** in the AskUserQuestion `description` field for each option
+
+Example of CORRECT interaction:
+```
+### Step 3: Collection Method
+
+This determines how your metric gathers data at runtime.
+
+- **Event-based**: Subscribe to an existing game event (e.g., GameManager.OnScoreChanged, Character.IsDead). Best for discrete events like deaths or coin pickups.
+- **Polling**: Check a value every frame in Update() (e.g., player position, velocity). Best for continuous measurements.
+- **Derived**: Calculate from other existing metrics (e.g., hesitationScore = timeWithLowSpeed / totalRunTime). No new data collection needed.
+```
+Then call AskUserQuestion with labels like "Event-based (Recommended)", "Polling", "Derived" — each with a description.
+
+**NEVER** present bare numbers or short labels without context. Always explain what each choice means and its trade-offs.
+
 ## Custom Metric Wizard
 
 When `add custom` is invoked, guide the user through:

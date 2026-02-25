@@ -135,29 +135,105 @@ The paper identifies these positive outcomes to check for:
 
 Flag any simulation where these criteria are violated.
 
+## Tendency-Aware Evaluation
+
+If `dda_config.json` contains tendency/bias settings, add these extra checks to the evaluation:
+
+6. **Tendency compliance**: Does the LLM respect the configured tendency?
+   - For "protective": Are ease-down adjustments larger than toughen-up adjustments?
+   - For "punishing": Are toughen-up adjustments larger than ease-down adjustments?
+   - Compute: `avgEaseDelta / avgHardenDelta` ratio. Protective should be >1.0, Punishing should be <1.0
+
+7. **Sensitivity compliance**: Does the LLM respect per-variable sensitivity?
+   - For high-sensitivity variables (>1.0): Are deltas proportionally larger?
+   - For low-sensitivity variables (<1.0): Are deltas proportionally smaller?
+   - For locked variables (0.0): Did the LLM leave them unchanged?
+   - Compute per-variable: `actualDelta / avgDelta` vs `configuredSensitivity`. These should correlate
+
+8. **Priority adherence**: When multiple variables changed, did high-priority ones change more?
+
+Include these in the report under a "## Tendency & Bias Analysis" section:
+```markdown
+## Tendency & Bias Analysis
+Configured Tendency: {protective|punishing|symmetric|custom}
+Ease/Harden Ratio: {ratio} (expected: {expected based on tendency})
+
+Per-Variable Sensitivity Compliance:
+| Variable         | Config Sensitivity | Actual Relative Delta | Match? |
+|------------------|-------------------|-----------------------|--------|
+| enemyDensity     | 1.5               | 1.4x avg              | YES    |
+| runSpeed         | 0.5               | 0.6x avg              | YES    |
+| jumpStrength     | 1.0 (locked: inc) | +0.8 (no decrease)    | YES    |
+```
+
+## Interaction Guidelines (CRITICAL for CLI)
+
+When asking the user to choose between options, you MUST follow this pattern for every question:
+
+1. **Always print a descriptive header** explaining what this step configures and why it matters
+2. **Always describe each option in full** in your message text BEFORE calling AskUserQuestion
+3. **Use descriptive labels** in AskUserQuestion options — never just numbers or short codes
+4. **Include the option description** in the AskUserQuestion `description` field for each option
+
+Example of CORRECT interaction:
+```
+### Step 1: Baseline Type
+
+This determines how the rule-based comparison system calculates adjustments.
+The rule-based baseline is what you compare your LLM outputs against.
+
+- **Fixed percentage**: Simple symmetric % changes per symptom level (e.g., low → -20% harming, +20% helping). Matches the paper's Table 1 approach.
+- **Linear interpolation**: Scales adjustment size linearly with symptom severity. Smoother transitions.
+- **Tendency-aware**: Uses your configured tendency from dda_config.json so rules and LLM share the same bias. Fairest comparison.
+- **Custom formula**: You write custom adjustment logic per variable.
+```
+Then call AskUserQuestion with labels like "Fixed percentage (Recommended)", "Linear interpolation", "Tendency-aware", "Custom formula" — each with a description.
+
+**NEVER** present bare numbers or short labels without context. Always explain what each choice means and its trade-offs.
+
 ## Interactive Configuration
 
 When `configure-baseline` is invoked:
+
+First, **check for existing tendency/bias config** in `Assets/Scripts/RedRunner/DDA/dda_config.json`. If it exists, offer to use those settings as a starting point for the rule-based baseline too (so the comparison is fair — rules and LLM share the same tendency).
 
 1. **Baseline type**
    - Fixed percentage adjustments (simple, like the paper's example)
    - Linear interpolation based on symptom severity
    - Custom formula per variable
    - Import from existing script
+   - **Tendency-aware** (NEW): Use the tendency from dda_config.json. E.g., if "protective", the rule-based baseline also eases harder than it toughens
 
 2. **Adjustment magnitudes**
    - For each symptom level (very_low, low, slightly_low, normal, slightly_high, high, sharply_high):
      - What % adjustment for player-harming variables?
      - What % adjustment for player-helping variables?
+   - If tendency config exists, pre-fill with asymmetric defaults:
+     - Protective: ease=+25%, toughen=+15%
+     - Punishing: ease=+15%, toughen=+25%
+     - Symmetric: ease=+20%, toughen=+20%
 
 3. **Per-variable overrides** (optional)
    - Should any specific variable have different adjustment rules?
    - E.g., "Never adjust runSpeed more than 10% at a time"
+   - If dda_config.json has per-variable sensitivity values, use them as multipliers on the base percentages
+   - E.g., `enemyDensity` with sensitivity 1.5 → base 20% * 1.5 = 30% adjustment in rules
 
-4. **Save location**
+4. **Analyzer harshness** (controls how easily the system triggers adjustments)
+   - **Lenient**: Wide "normal" band — player must be really struggling/dominating before DDA acts
+     - Death rate normal: [1.5, 5.0], Survival time normal: [8s, 30s]
+   - **Standard** (default): Paper's thresholds
+     - Death rate normal: [2.0, 4.0], Survival time normal: [10s, 25s]
+   - **Strict**: Narrow "normal" band — DDA reacts to small performance swings
+     - Death rate normal: [2.5, 3.5], Survival time normal: [15s, 22s]
+   - **Custom**: Student sets each boundary manually
+   - This writes to `DDAAnalyzer` threshold fields and saves to dda_config.json
+
+5. **Save location**
    - Write to `RuleBasedBaseline.cs`
    - Save as config JSON (for runtime switching)
    - Both
+   - Update `DDAAnalyzer` thresholds in code (if harshness was changed)
 
 When `report custom` is invoked:
 
